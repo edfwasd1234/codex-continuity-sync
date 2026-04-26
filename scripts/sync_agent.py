@@ -329,6 +329,7 @@ APP_HTML = """<!doctype html>
     const setupPanel = document.getElementById("setupPanel");
     const accountInput = document.getElementById("accountInput");
     const buttons = new Map();
+    const transfers = new Set();
 
     function showToast(message, kind = "ok") {
       toast.textContent = message;
@@ -356,6 +357,8 @@ APP_HTML = """<!doctype html>
     }
 
     async function pull(deviceId, name) {
+      if (transfers.has(deviceId)) return;
+      transfers.add(deviceId);
       const button = buttons.get(deviceId);
       if (button) {
         button.disabled = true;
@@ -368,6 +371,7 @@ APP_HTML = """<!doctype html>
       } catch (error) {
         showToast(`Transfer failed: ${error.message}`, "error");
       } finally {
+        transfers.delete(deviceId);
         if (button) {
           button.disabled = false;
           button.textContent = "Transfer Data";
@@ -424,6 +428,8 @@ APP_HTML = """<!doctype html>
         button.className = "primary";
         button.type = "button";
         button.textContent = "Transfer Data";
+        button.disabled = transfers.has(peer.deviceId);
+        if (button.disabled) button.textContent = "Transferring";
         button.addEventListener("click", () => pull(peer.deviceId, peer.deviceName || "device"));
         buttons.set(peer.deviceId, button);
         row.append(info, button);
@@ -475,7 +481,10 @@ def read_json(path: Path, default: object) -> object:
 
 def write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, sort_keys=True), encoding="utf-8")
+    body = json.dumps(value, indent=2, sort_keys=True)
+    tmp_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    tmp_path.write_text(body, encoding="utf-8")
+    tmp_path.replace(path)
 
 
 def state_dir(codex_home: Path) -> Path:
@@ -551,7 +560,10 @@ class PeerStore:
             self._flush_locked()
 
     def _flush_locked(self) -> None:
-        write_json(peer_store_path(self.codex_home), {"peers": list(self.peers.values())})
+        try:
+            write_json(peer_store_path(self.codex_home), {"peers": list(self.peers.values())})
+        except OSError as exc:
+            print(f"Warning: could not write peer cache: {exc}")
 
 
 def local_ip_hint() -> str:
