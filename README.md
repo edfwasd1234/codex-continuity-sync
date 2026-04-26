@@ -18,9 +18,26 @@ The plugin includes:
 
 - `skills/continuity-sync/SKILL.md` with Codex-facing usage instructions.
 - `scripts/continuity_pack.py` for export, inspect, list, and import.
-- `scripts/sync_agent.py` for same-account LAN discovery and peer-to-peer transfer.
+- `scripts/sync_agent.py` for the browser app, same-account LAN discovery, and peer-to-peer transfer.
+- `start-continuity-sync.bat` as a Windows launcher that opens the browser app.
 - `docs/auto-sync-design.md` with the no-command product direction.
 - `hooks.json` and `.mcp.json` placeholders for future UI or MCP integration.
+
+## App Mode
+
+On Windows, double-click:
+
+```text
+start-continuity-sync.bat
+```
+
+That starts the local sync app and opens the browser dashboard. Same-account devices on the local network appear automatically. Click **Transfer Data** beside a device to pull its Codex continuity into this machine.
+
+For prototype testing with an explicit account ID:
+
+```powershell
+python .\plugins\codex-continuity-sync\scripts\sync_agent.py serve --account-id "your-codex-account-email-or-id" --open
+```
 
 ## Friendly Auto-Sync Direction
 
@@ -29,7 +46,7 @@ The intended experience is that Codex starts `sync_agent.py` in the background w
 Until Codex plugin lifecycle hooks are wired in, the agent can be run manually for testing:
 
 ```powershell
-python .\plugins\codex-continuity-sync\scripts\sync_agent.py serve --account-id "your-codex-account-email-or-id"
+python .\plugins\codex-continuity-sync\scripts\sync_agent.py serve --account-id "your-codex-account-email-or-id" --open
 ```
 
 On another machine signed into the same account and running the same plugin, use the same command. Same-account peers will appear automatically. Different-account peers are ignored.

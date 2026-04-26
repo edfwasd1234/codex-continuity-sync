@@ -21,6 +21,7 @@ import threading
 import time
 import urllib.parse
 import uuid
+import webbrowser
 
 import continuity_pack
 
@@ -30,6 +31,435 @@ MULTICAST_GROUP = "239.77.77.77"
 DISCOVERY_PORT = 47777
 ANNOUNCE_INTERVAL_SECONDS = 5
 PEER_TTL_SECONDS = 20
+
+APP_HTML = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex Continuity Sync</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --ink: #17191f;
+      --muted: #69707d;
+      --line: #dfe3ea;
+      --blue: #2563eb;
+      --blue-strong: #1d4ed8;
+      --green: #16794c;
+      --red: #b42318;
+      --shadow: 0 16px 40px rgba(20, 28, 45, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.45 "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 8px 0 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .subhead {
+      margin-top: 7px;
+      color: var(--muted);
+      max-width: 680px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(20, 28, 45, 0.05);
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+    }
+    .setup {
+      display: none;
+      margin-top: 24px;
+      padding: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .setup.show { display: block; }
+    .setup-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 22px;
+      padding-top: 24px;
+    }
+    section, aside {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.25;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+    .muted { color: var(--muted); }
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      min-height: 36px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { border-color: #c7ced9; background: #fbfcfe; }
+    button.primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: white;
+      font-weight: 650;
+    }
+    button.primary:hover { background: var(--blue-strong); }
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+    .peer-list {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+    }
+    .peer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fcfdff;
+    }
+    .peer-name {
+      font-size: 15px;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+    .peer-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tag {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: white;
+    }
+    .empty {
+      padding: 42px 18px;
+      color: var(--muted);
+      text-align: center;
+    }
+    aside {
+      padding: 18px;
+      align-self: start;
+    }
+    .info {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .info-row {
+      display: grid;
+      gap: 3px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .info-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .value {
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      width: min(420px, calc(100vw - 44px));
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .toast.show { display: block; }
+    .toast.error { border-color: #f1a29a; color: var(--red); }
+    .toast.ok { border-color: #9fd8bd; color: var(--green); }
+    @media (max-width: 820px) {
+      main { padding: 18px; }
+      header { flex-direction: column; }
+      .grid { grid-template-columns: 1fr; }
+      .setup-form { grid-template-columns: 1fr; }
+      .peer { grid-template-columns: 1fr; }
+      .peer button { width: 100%; }
+      .status-pill { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Codex Continuity Sync</h1>
+        <div class="subhead">Same-account devices on this network appear here automatically.</div>
+      </div>
+      <div class="status-pill"><span class="dot"></span><span id="statusText">Starting</span></div>
+    </header>
+    <div class="setup" id="setupPanel">
+      <h2>Connect This Account</h2>
+      <div class="muted">Enter the same Codex account email or ID on each machine. It is hashed before storage or discovery.</div>
+      <div class="setup-form">
+        <input id="accountInput" type="text" autocomplete="email" placeholder="you@example.com">
+        <button class="primary" id="saveAccountButton" type="button">Save Account</button>
+      </div>
+    </div>
+    <div class="grid">
+      <section>
+        <div class="section-head">
+          <div>
+            <h2>Available Devices</h2>
+            <div class="muted" id="peerCount">Looking for devices</div>
+          </div>
+          <button id="refreshButton" type="button">Refresh</button>
+        </div>
+        <div class="peer-list" id="peerList"></div>
+      </section>
+      <aside>
+        <h2>This Device</h2>
+        <div class="info">
+          <div class="info-row">
+            <div class="label">Name</div>
+            <div class="value" id="deviceName">...</div>
+          </div>
+          <div class="info-row">
+            <div class="label">Device ID</div>
+            <div class="value" id="deviceId">...</div>
+          </div>
+          <div class="info-row">
+            <div class="label">Account Check</div>
+            <div class="value" id="accountMode">...</div>
+          </div>
+          <div class="info-row">
+            <div class="label">Codex Home</div>
+            <div class="value" id="codexHome">...</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <div class="toast" id="toast"></div>
+  <script>
+    const peerList = document.getElementById("peerList");
+    const peerCount = document.getElementById("peerCount");
+    const statusText = document.getElementById("statusText");
+    const toast = document.getElementById("toast");
+    const setupPanel = document.getElementById("setupPanel");
+    const accountInput = document.getElementById("accountInput");
+    const buttons = new Map();
+
+    function showToast(message, kind = "ok") {
+      toast.textContent = message;
+      toast.className = `toast show ${kind}`;
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => {
+        toast.className = "toast";
+      }, 5200);
+    }
+
+    function relativeSeen(lastSeen) {
+      const seconds = Math.max(0, Math.round(Date.now() / 1000 - lastSeen));
+      if (seconds < 2) return "just now";
+      if (seconds < 60) return `${seconds}s ago`;
+      return `${Math.round(seconds / 60)}m ago`;
+    }
+
+    async function api(path, options) {
+      const response = await fetch(path, options);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    async function pull(deviceId, name) {
+      const button = buttons.get(deviceId);
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Transferring";
+      }
+      try {
+        await api(`/pull?deviceId=${encodeURIComponent(deviceId)}`, { method: "POST" });
+        showToast(`Transferred data from ${name}.`, "ok");
+        await refresh();
+      } catch (error) {
+        showToast(`Transfer failed: ${error.message}`, "error");
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = "Transfer Data";
+        }
+      }
+    }
+
+    async function saveAccount() {
+      const accountId = accountInput.value.trim();
+      if (!accountId) {
+        showToast("Enter the same account email or ID on each machine.", "error");
+        return;
+      }
+      try {
+        await api("/account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accountId })
+        });
+        accountInput.value = "";
+        showToast("Account saved. Looking for matching devices.", "ok");
+        await refresh();
+      } catch (error) {
+        showToast(`Could not save account: ${error.message}`, "error");
+      }
+    }
+
+    function renderPeers(peers) {
+      buttons.clear();
+      peerList.innerHTML = "";
+      peerCount.textContent = peers.length === 1 ? "1 device found" : `${peers.length} devices found`;
+      if (!peers.length) {
+        peerList.innerHTML = '<div class="empty">No same-account devices are visible yet.</div>';
+        return;
+      }
+      for (const peer of peers) {
+        const row = document.createElement("div");
+        row.className = "peer";
+        const info = document.createElement("div");
+        info.innerHTML = `
+          <div class="peer-name"></div>
+          <div class="peer-meta">
+            <span class="tag"></span>
+            <span class="tag"></span>
+            <span class="tag"></span>
+          </div>
+        `;
+        info.querySelector(".peer-name").textContent = peer.deviceName || "Codex device";
+        const tags = info.querySelectorAll(".tag");
+        tags[0].textContent = peer.host || "unknown host";
+        tags[1].textContent = `port ${peer.apiPort}`;
+        tags[2].textContent = `seen ${relativeSeen(peer.lastSeen || 0)}`;
+        const button = document.createElement("button");
+        button.className = "primary";
+        button.type = "button";
+        button.textContent = "Transfer Data";
+        button.addEventListener("click", () => pull(peer.deviceId, peer.deviceName || "device"));
+        buttons.set(peer.deviceId, button);
+        row.append(info, button);
+        peerList.append(row);
+      }
+    }
+
+    async function refresh() {
+      try {
+        const status = await api("/status");
+        document.getElementById("deviceName").textContent = status.device.deviceName;
+        document.getElementById("deviceId").textContent = status.device.deviceId;
+        document.getElementById("accountMode").textContent = status.accountBinding.mode;
+        document.getElementById("codexHome").textContent = status.codexHome;
+        setupPanel.classList.toggle("show", status.accountBinding.mode === "unknown");
+        statusText.textContent = "Running";
+        const peers = await api("/peers");
+        renderPeers(peers.peers || []);
+      } catch (error) {
+        statusText.textContent = "Needs attention";
+        peerCount.textContent = "Could not load devices";
+        showToast(error.message, "error");
+      }
+    }
+
+    document.getElementById("refreshButton").addEventListener("click", refresh);
+    document.getElementById("saveAccountButton").addEventListener("click", saveAccount);
+    accountInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveAccount();
+    });
+    refresh();
+    window.setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
+"""
 
 
 def now() -> float:
@@ -114,6 +544,12 @@ class PeerStore:
                 return peer
         return None
 
+    def set_account_fingerprint(self, account_fingerprint: str | None) -> None:
+        with self.lock:
+            self.account_fingerprint = account_fingerprint
+            self.peers = {}
+            self._flush_locked()
+
     def _flush_locked(self) -> None:
         write_json(peer_store_path(self.codex_home), {"peers": list(self.peers.values())})
 
@@ -143,12 +579,38 @@ def build_announcement(device: dict, binding: dict, api_port: int) -> bytes:
     ).encode("utf-8")
 
 
-def announce_loop(stop: threading.Event, payload: bytes) -> None:
+def config_path(codex_home: Path) -> Path:
+    return state_dir(codex_home) / "config.json"
+
+
+def read_saved_account_id(codex_home: Path) -> str | None:
+    value = read_json(config_path(codex_home), {})
+    if isinstance(value, dict):
+        account_id = value.get("accountId")
+        if isinstance(account_id, str) and account_id.strip():
+            return account_id.strip()
+    return None
+
+
+def save_account_id(codex_home: Path, account_id: str) -> None:
+    write_json(config_path(codex_home), {"accountId": account_id.strip()})
+
+
+def resolve_account_id(codex_home: Path, account_id: str | None) -> str | None:
+    if account_id:
+        return account_id
+    env_account_id = os.environ.get("CODEX_ACCOUNT_ID")
+    if env_account_id:
+        return env_account_id
+    return read_saved_account_id(codex_home)
+
+
+def announce_loop(stop: threading.Event, payload_factory) -> None:
     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)) as sock:
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
         while not stop.is_set():
             with contextlib.suppress(OSError):
-                sock.sendto(payload, (MULTICAST_GROUP, DISCOVERY_PORT))
+                sock.sendto(payload_factory(), (MULTICAST_GROUP, DISCOVERY_PORT))
             stop.wait(ANNOUNCE_INTERVAL_SECONDS)
 
 
@@ -174,14 +636,26 @@ def listen_loop(stop: threading.Event, peers: PeerStore) -> None:
                 peers.update(message, address[0])
 
 
-def make_handler(codex_home: Path, account_id: str | None, peers: PeerStore):
+def make_handler(codex_home: Path, peers: PeerStore, device: dict, app_state: dict):
     class Handler(BaseHTTPRequestHandler):
         server_version = "CodexContinuitySync/0.1"
 
         def do_GET(self) -> None:
             parsed = urllib.parse.urlparse(self.path)
-            if parsed.path == "/health":
+            if parsed.path in {"/", "/app"}:
+                self.write_html(APP_HTML)
+            elif parsed.path == "/health":
                 self.write_json({"ok": True, "plugin": PLUGIN_NAME})
+            elif parsed.path == "/status":
+                self.write_json(
+                    {
+                        "ok": True,
+                        "plugin": PLUGIN_NAME,
+                        "device": device,
+                        "accountBinding": app_state["binding"],
+                        "codexHome": str(codex_home),
+                    }
+                )
             elif parsed.path == "/peers":
                 self.write_json({"peers": peers.list()})
             elif parsed.path == "/pack":
@@ -199,11 +673,27 @@ def make_handler(codex_home: Path, account_id: str | None, peers: PeerStore):
                     self.send_error(404, "Peer not found")
                     return
                 try:
-                    imported = pull_from_peer(peer, codex_home, account_id)
+                    imported = pull_from_peer(peer, codex_home, app_state["account_id"])
                 except RuntimeError as exc:
                     self.send_error(502, str(exc))
                     return
                 self.write_json({"ok": True, "imported": imported, "peer": peer})
+            elif parsed.path == "/account":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                    account_id = str(payload.get("accountId", "")).strip()
+                except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+                    self.send_error(400, "Invalid account payload")
+                    return
+                if not account_id:
+                    self.send_error(400, "Missing account ID")
+                    return
+                save_account_id(codex_home, account_id)
+                app_state["account_id"] = account_id
+                app_state["binding"] = continuity_pack.account_binding(codex_home, account_id)
+                peers.set_account_fingerprint(app_state["binding"].get("fingerprint"))
+                self.write_json({"ok": True, "accountBinding": app_state["binding"]})
             else:
                 self.send_error(404)
 
@@ -214,7 +704,7 @@ def make_handler(codex_home: Path, account_id: str | None, peers: PeerStore):
                 args = argparse.Namespace(
                     source_codex_home=str(codex_home),
                     output=str(tmp_path),
-                    account_id=account_id,
+                    account_id=app_state["account_id"],
                     include_secrets=False,
                 )
                 result = continuity_pack.write_export(args)
@@ -235,6 +725,14 @@ def make_handler(codex_home: Path, account_id: str | None, peers: PeerStore):
             body = json.dumps(value, indent=2, sort_keys=True).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def write_html(self, value: str) -> None:
+            body = value.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -275,22 +773,29 @@ def run_server(args: argparse.Namespace) -> int:
     codex_home = Path(args.codex_home).expanduser().resolve()
     codex_home.mkdir(parents=True, exist_ok=True)
     device = load_device(codex_home)
-    binding = continuity_pack.account_binding(codex_home, args.account_id)
+    account_id = resolve_account_id(codex_home, args.account_id)
+    binding = continuity_pack.account_binding(codex_home, account_id)
+    app_state = {"account_id": account_id, "binding": binding}
     if not binding.get("fingerprint"):
-        print("Account could not be inferred. Start with --account-id for same-account discovery.")
+        print("Account could not be inferred. Open the app and save your account email or ID.")
     peers = PeerStore(codex_home, device["deviceId"], binding.get("fingerprint"))
-    server = ThreadingHTTPServer((args.host, args.port), make_handler(codex_home, args.account_id, peers))
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(codex_home, peers, device, app_state))
     api_port = server.server_address[1]
-    payload = build_announcement(device, binding, api_port)
+    def payload_factory() -> bytes:
+        return build_announcement(device, app_state["binding"], api_port)
+
     stop = threading.Event()
     threads = [
-        threading.Thread(target=announce_loop, args=(stop, payload), daemon=True),
+        threading.Thread(target=announce_loop, args=(stop, payload_factory), daemon=True),
         threading.Thread(target=listen_loop, args=(stop, peers), daemon=True),
     ]
     for thread in threads:
         thread.start()
-    print(f"{PLUGIN_NAME} agent running for {device['deviceName']} at http://{local_ip_hint()}:{api_port}")
+    app_url = f"http://127.0.0.1:{api_port}/"
+    print(f"{PLUGIN_NAME} app running for {device['deviceName']} at {app_url}")
     print("Peers with the same account and plugin will appear automatically.")
+    if args.open:
+        webbrowser.open(app_url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -328,6 +833,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--account-id", help="Stable account identifier for same-account discovery")
     serve.add_argument("--host", default="0.0.0.0")
     serve.add_argument("--port", type=int, default=0)
+    serve.add_argument("--open", action="store_true", help="Open the browser app after starting")
     serve.set_defaults(func=run_server)
 
     peers = sub.add_parser("peers", help="Show recently discovered same-account peers")

@@ -1,0 +1,51 @@
+{
+  "name": "codex-continuity-sync",
+  "version": "0.1.0",
+  "description": "Export and import portable Codex continuity packs for chats, memories, skills, and local plugin state.",
+  "author": {
+    "name": "[TODO: Author Name]",
+    "email": "[TODO: author@example.com]",
+    "url": "[TODO: https://github.com/author]"
+  },
+  "homepage": "[TODO: https://docs.example.com/codex-continuity-sync]",
+  "repository": "[TODO: https://github.com/author/codex-continuity-sync]",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "sync",
+    "memory",
+    "backup"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "apps": "[TODO: ./.app.json]",
+  "interface": {
+    "displayName": "Codex Continuity Sync",
+    "shortDescription": "Move Codex chats, memories, and local context between machines.",
+    "longDescription": "Creates portable continuity packs from a Codex home directory and imports them on another machine with backups and secret-aware defaults.",
+    "developerName": "[TODO: Developer Name]",
+    "category": "[TODO: Productivity]",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "[TODO: https://docs.example.com/codex-continuity-sync]",
+    "privacyPolicyURL": "[TODO: https://openai.com/policies/row-privacy-policy/]",
+    "termsOfServiceURL": "[TODO: https://openai.com/policies/row-terms-of-use/]",
+    "defaultPrompt": [
+      "Export a Codex continuity pack for this machine.",
+      "Inspect this continuity pack before importing it.",
+      "Import this continuity pack into my Codex home with backups."
+    ],
+    "brandColor": "#2563EB",
+    "composerIcon": "[TODO: ./assets/icon.png]",
+    "logo": "[TODO: ./assets/logo.png]",
+    "screenshots": [
+      "[TODO: ./assets/screenshot1.png]",
+      "[TODO: ./assets/screenshot2.png]",
+      "[TODO: ./assets/screenshot3.png]"
+    ]
+  }
+}

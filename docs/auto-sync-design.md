@@ -5,7 +5,7 @@ The friendly target experience is:
 1. The user installs the plugin on two machines.
 2. Codex starts the plugin agent in the background.
 3. Machines signed into the same Codex account discover each other.
-4. Codex shows available devices and offers one-click import or sync.
+4. The browser app shows available devices and offers one-click import or sync.
 5. Transfers refuse to run across different accounts.
 
 ## Local Discovery
@@ -46,6 +46,8 @@ No chat or memory payload should be stored in rendezvous. It should store only d
 Each agent exposes a tiny HTTP API:
 
 - `GET /health`
+- `GET /`
+- `GET /status`
 - `GET /peers`
 - `GET /pack`
 - `POST /pull?deviceId=<id>`
