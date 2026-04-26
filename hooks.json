@@ -1,0 +1,9 @@
+{
+  "hooks": [
+    {
+      "event": "plugin:start",
+      "command": "python ./scripts/sync_agent.py serve --account-id ${CODEX_ACCOUNT_ID}",
+      "description": "Future lifecycle hook: start same-account discovery and transfer agent when Codex loads the plugin with the authenticated account ID."
+    }
+  ]
+}
