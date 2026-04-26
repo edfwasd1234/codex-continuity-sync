@@ -33,6 +33,8 @@ start-continuity-sync.bat
 
 That starts the local sync app and opens the browser dashboard. Same-account devices on the local network appear automatically. Click **Transfer Data** beside a device to pull its Codex continuity into this machine.
 
+For the best result, close Codex on both machines before clicking **Transfer Data**, then reopen Codex on the destination machine after the transfer finishes. Codex Desktop keeps part of the visible chat list and state in SQLite files, so closing the app first makes the copied files cleaner and reopening makes Codex reload them.
+
 For prototype testing with an explicit account ID:
 
 ```powershell
@@ -75,7 +77,9 @@ The script looks for common Codex continuity locations under `CODEX_HOME` or `~/
 
 - `chats`, `sessions`, `conversations`, `threads`
 - `memories`, `memory`, `state`, `data`
+- `sqlite`
 - `skills`, `plugins`
-- common standalone files such as `memory.json`, `memories.json`, and `settings.json`
+- common standalone files such as `.codex-global-state.json`, `session_index.jsonl`, `memory.json`, `memories.json`, and `settings.json`
+- Codex Desktop SQLite state files such as `logs_*.sqlite` and `state_*.sqlite`, including their `-wal` and `-shm` sidecars
 
 The exact Codex storage layout can change over time, so the script records every included file in `manifest.json`.

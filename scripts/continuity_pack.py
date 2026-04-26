@@ -31,13 +31,26 @@ DEFAULT_DIRS = (
     "data",
     "skills",
     "plugins",
+    "sqlite",
 )
 
 DEFAULT_FILES = (
+    ".codex-global-state.json",
+    ".codex-global-state.json.bak",
     "memory.json",
     "memories.json",
+    "session_index.jsonl",
     "settings.json",
     "preferences.json",
+)
+
+DEFAULT_FILE_PATTERNS = (
+    "logs_*.sqlite",
+    "logs_*.sqlite-shm",
+    "logs_*.sqlite-wal",
+    "state_*.sqlite",
+    "state_*.sqlite-shm",
+    "state_*.sqlite-wal",
 )
 
 ACCOUNT_HINT_FILES = (
@@ -167,6 +180,9 @@ def iter_candidates(source: Path, include_secrets: bool) -> list[Path]:
         path = source / name
         if path.is_file():
             candidates.append(path)
+
+    for pattern in DEFAULT_FILE_PATTERNS:
+        candidates.extend(path for path in source.glob(pattern) if path.is_file())
 
     unique = sorted(set(candidates))
     if include_secrets:
